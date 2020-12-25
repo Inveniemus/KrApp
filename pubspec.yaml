@@ -1,0 +1,24 @@
+name: kerbal_remote_application
+description: Test kRPC server functionalities in a Flutter app
+
+publish_to: 'none'
+
+version: 0.1.0
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  krpc_dart:
+    path: ../krpc-dart/
+  flutter_riverpod: ^0.12.1
+  flutter_bloc: ^6.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
