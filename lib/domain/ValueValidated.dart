@@ -1,30 +1,64 @@
 /// This class represents a value-validated object.
 ///
 /// Each value-validated object has to:
-/// * extend this class with proper Type T,
-/// * Provide the validate() method,
-/// * Provide meaningful failures.
+/// * Provide one (or more) meaningful failure implementation,
+/// * Provide the Validator implementation,
+/// * extend this class.
 abstract class ValueValidated<T> {
-  T _value;
-  Failure _failure;
+  final T _value;
+  final Validator<T> _validator;
 
-  ValueValidated(this._value) {
-    validate();
+  Failure _failure;
+  T _validatedValue;
+
+  ValueValidated(this._value, this._validator);
+
+  bool get isValid {
+    if (_failure == null) {
+      _processValidator();
+      return isValid;
+    } else if (_failure is NoFailure) {
+      return true;
+    } else { // Failure case
+      return false;
+    }
   }
 
-  bool get isFailed => _failure != null;
-  T get value => _value;
+  bool get isFailed => !isValid;
 
-  void validate();
+  Failure get failure => _failure;
+  T get value => _validatedValue;
+
+  void _processValidator() {
+    final validatorResult = _validator.getFailureOrNull();
+    if (validatorResult == null) {
+      _failure = NoFailure();
+      _validatedValue = _value;
+    } else {
+      _failure = validatorResult;
+      _validatedValue = null;
+    }
+  }
+}
+
+/// When extended, this class contains validation logic in the concrete
+/// [getFailureOrNull] method.
+///
+/// It is intended to be used by a [ValueValidated] object. To use it, extend it
+/// by providing the getFailureOrNull method.
+abstract class Validator<T> {
+  final T _value;
+  Validator(this._value);
+
+  /// Method for validation logic. If it returns null, value is
+  /// validated. Otherwise, it shall return a concrete implementation of
+  /// Failure.
+  Failure getFailureOrNull();
 }
 
 /// This class represents a failed value of a value validated object (a
-/// [ValueValidated] concrete class). To use it, implement it with a meaningful
+/// [ValueValidated] class). To use it, implement it with a meaningful
 /// class name.
-abstract class Failure {
-  String _description;
-  Failure(this._description);
+abstract class Failure {}
 
-  @override
-  String toString() => _description;
-}
+class NoFailure extends Failure {}

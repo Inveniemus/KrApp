@@ -133,24 +133,3 @@ class KrpcConnectionButton extends StatelessWidget {
 }
 
 enum ConnectionButtonStatus { notValid, toConnect, connected, error }
-
-// String validators
-/// This validator accepts only ipv4 addresses and "localhost"
-String ipValidator(String value) {
-  if (value == 'localhost') return null;
-  final ipRE = RegExp(r'\d+\.\d+\.\d+\.\d+');
-  if (ipRE.hasMatch(value)) {
-    return null;
-  } else {
-    return 'Wrong ip format!';
-  }
-}
-
-String portValidator(String value) {
-  final intRE = RegExp(r'\d+');
-  if (intRE.hasMatch(value)) {
-    return null;
-  } else {
-    return 'Wrong port format!';
-  }
-}
