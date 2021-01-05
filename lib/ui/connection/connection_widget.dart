@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:kerbal_remote_application/domain/connection/connection_parameters.dart';
 
 import '../../application/connection_bloc.dart';
 import '../../domain/connection/ip.dart';
@@ -8,41 +7,22 @@ import '../../domain/connection/port.dart';
 
 typedef IpCallback = Function(Ip ip);
 typedef PortCallback = Function(Port port);
-typedef StringCallback = Function(String string);
 
-class ConnectionWidget extends StatefulWidget {
-  @override
-  _ConnectionWidgetState createState() => _ConnectionWidgetState();
-}
-
-class _ConnectionWidgetState extends State<ConnectionWidget> {
-  ConnectionParameters _connectionParameters;
-
-  @override
-  void initState() {
-    super.initState();
-    _connectionParameters = ConnectionParameters();
-  }
-
-  void setIp(Ip ip) => _connectionParameters.ip = ip;
-  void setRpcPort(Port port) => _connectionParameters.rpcPort = port;
-  void setStreamPort(Port port) => _connectionParameters.streamPort = port;
-  void setClientName(String string) =>
-      _connectionParameters.clientName = string;
-
+class ConnectionWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
       children: [
         Icon(Icons.error),
-        IpInputField('ip address or "localhost"', Ip.localhost(), setIp),
-        PortInputField('RPC port', Port.defaultRpc(), setRpcPort),
-        PortInputField('Stream port', Port.defaultStream(), setStreamPort),
-        TextInputField('Client name', 'Dart-client', setClientName),
+        InputField<Ip>('ip address or "localhost"'),
+        InputField<Port>('RPC port'),
+        InputField<Port>('Stream port'),
+        InputField<String>('Client name'),
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: BlocConsumer<KrpcConnectionBloc, KrpcConnectionState>(
             listener: (context, state) {
+              print(state);
               if (state is KrpcConnectionErrorState) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text("ERROR! Couldn't connect"),
@@ -52,17 +32,24 @@ class _ConnectionWidgetState extends State<ConnectionWidget> {
             },
             builder: (context, state) {
               if (state is KrpcDisconnectedState) {
-                if (true) {
-                  return KrpcConnectionButton(ConnectionButtonStatus.toConnect);
-                } else {
-                  return KrpcConnectionButton(ConnectionButtonStatus.notValid);
-                }
+                return KrpcConnectionButton(ConnectionButtonStatus.ready);
               } else if (state is KrpcConnectedState) {
                 return KrpcConnectionButton(ConnectionButtonStatus.connected);
+              } else if (state is KrpcConnectingState) {
+                return KrpcConnectionButton(ConnectionButtonStatus.connecting);
+              } else if (state is KprcConnectionValidityState) {
+                if (state.validity == ConnectionValidity.invalid) {
+                  return KrpcConnectionButton(ConnectionButtonStatus.notValid);
+                } else if (state.validity == ConnectionValidity.rpcOnly) {
+                  return KrpcConnectionButton(ConnectionButtonStatus.rpcOnly);
+                } else {
+                  return KrpcConnectionButton(ConnectionButtonStatus.ready);
+                }
               } else if (state is KrpcConnectionErrorState) {
                 return KrpcConnectionButton(ConnectionButtonStatus.error);
+              } else {
+                return KrpcConnectionButton(ConnectionButtonStatus.ready);
               }
-              return KrpcConnectionButton(ConnectionButtonStatus.error);
             },
           ),
         ),
@@ -71,28 +58,47 @@ class _ConnectionWidgetState extends State<ConnectionWidget> {
   }
 }
 
-class IpInputField extends StatefulWidget {
+class InputField<T> extends StatefulWidget {
   final String _label;
-  final Ip _initialValue;
-  final IpCallback _ipCallback;
 
-  IpInputField(this._label, this._initialValue, this._ipCallback);
+  InputField(this._label);
 
   @override
-  _IpInputFieldState createState() => _IpInputFieldState();
+  _InputFieldState<T> createState() => _InputFieldState<T>();
 }
 
-class _IpInputFieldState extends State<IpInputField> {
-  Ip _value;
+class _InputFieldState<T> extends State<InputField> {
   String _inputMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    _value = widget._initialValue;
+  void _processStringValue(String value) {
+    if (T is Ip) {
+      final ip = Ip(value);
+      if (ip.isValid || value == '') {
+        context.read<KrpcConnectionBloc>().add(IpParameterEvent(ip));
+        _rebuildInputMessage(null);
+      } else {
+        _rebuildInputMessage(ip.failure.description());
+      }
+    } else if (T is Port) {
+      final port = Port(value);
+      if (port.isValid || value == '') {
+        if (widget._label == 'RPC port') {
+          context.read<KrpcConnectionBloc>().add(RpcPortParameterEvent(port));
+        } else if (widget._label == 'Stream port') {
+          context
+              .read<KrpcConnectionBloc>()
+              .add(StreamPortParameterEvent(port));
+        }
+        _rebuildInputMessage(null);
+      } else {
+        _rebuildInputMessage(port.failure.description());
+      }
+    } else if (T is String) {
+      context.read<KrpcConnectionBloc>().add(ClientNameParameterEvent(value));
+    }
   }
 
-  void rebuildInputMessage(String message) {
+  void _rebuildInputMessage(String message) {
     if (_inputMessage != message) {
       setState(() {
         _inputMessage = message;
@@ -100,109 +106,15 @@ class _IpInputFieldState extends State<IpInputField> {
     }
   }
 
-  void setValidValue(Ip ip) {
-    widget._ipCallback(ip);
-    setState(() {
-      _value = ip;
-      _inputMessage = null;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: TextField(
-        decoration: getInputDecoration(
-            widget._label, widget._initialValue.value, _inputMessage),
+        decoration: getInputDecoration(widget._label, _inputMessage),
         onChanged: (String value) {
-          final ip = Ip(value);
-          if (ip.isValid) {
-            setValidValue(ip);
-          } else if (value == '') {
-            rebuildInputMessage(null);
-          } else {
-            rebuildInputMessage(ip.failure.description());
-          }
+          _processStringValue(value);
         },
-      ),
-    );
-  }
-}
-
-class PortInputField extends StatefulWidget {
-  final String _label;
-  final Port _initialValue;
-  final PortCallback _portCallback;
-
-  PortInputField(this._label, this._initialValue, this._portCallback);
-
-  @override
-  _PortInputFieldState createState() => _PortInputFieldState();
-}
-
-class _PortInputFieldState extends State<PortInputField> {
-  Port _value;
-  String _inputMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _value = widget._initialValue;
-  }
-
-  void rebuildInputMessage(String message) {
-    if (_inputMessage != message) {
-      setState(() {
-        _inputMessage = message;
-      });
-    }
-  }
-
-  void setValidValue(Port port) {
-    widget._portCallback(port);
-    setState(() {
-      _value = port;
-      _inputMessage = null;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        decoration: getInputDecoration(
-            widget._label, widget._initialValue.value, _inputMessage),
-        onChanged: (String value) {
-          final port = Port(value);
-          if (port.isValid) {
-            setValidValue(port);
-          } else if (value == '') {
-            rebuildInputMessage(null);
-          } else {
-            rebuildInputMessage(port.failure.description());
-          }
-        },
-      ),
-    );
-  }
-}
-
-class TextInputField extends StatelessWidget {
-  final String _label;
-  final String _initialValue;
-  final StringCallback _stringCallback;
-
-  TextInputField(this._label, this._initialValue, this._stringCallback);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        decoration: getInputDecoration(_label, _initialValue),
-        onChanged: (String value) => _stringCallback(value),
       ),
     );
   }
@@ -231,20 +143,28 @@ class KrpcConnectionButton extends StatelessWidget {
   KrpcConnectionButton(this._status) {
     switch (_status) {
       case ConnectionButtonStatus.notValid:
-        _text = "Entries not valid";
+        _text = "Entries not valid!";
         _color = Colors.grey;
         break;
-      case ConnectionButtonStatus.toConnect:
-        _text = "CONNECT";
+      case ConnectionButtonStatus.ready:
+        _text = "Connect?";
         _color = Colors.amber;
         break;
       case ConnectionButtonStatus.connected:
-        _text = "CONNECTED!";
+        _text = "Connected!";
         _color = Colors.green;
         break;
       case ConnectionButtonStatus.error:
-        _text = "ERROR";
+        _text = "ERROR!";
         _color = Colors.grey;
+        break;
+      case ConnectionButtonStatus.rpcOnly:
+        _text = "RPC only";
+        _color = Colors.greenAccent;
+        break;
+      case ConnectionButtonStatus.connecting:
+        _text = 'Connecting...';
+        _color = Colors.redAccent;
         break;
     }
   }
@@ -256,9 +176,15 @@ class KrpcConnectionButton extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
       child: Text(_text),
       onPressed: () {
-        if (_status == ConnectionButtonStatus.connected) {
+        if (_status == ConnectionButtonStatus.notValid) {
+          context.read<KrpcConnectionBloc>().add(RPCConnectionRequest());
+        } else if (_status == ConnectionButtonStatus.rpcOnly) {
+          context.read<KrpcConnectionBloc>().add(RPCConnectionRequest());
+        } else if (_status == ConnectionButtonStatus.ready) {
+          context.read<KrpcConnectionBloc>().add(RPCConnectionRequest());
+        } else if (_status == ConnectionButtonStatus.connected) {
           context.read<KrpcConnectionBloc>().add(DisconnectKrpcEvent());
-        } else if (_status == ConnectionButtonStatus.toConnect) {
+        } else if (_status == ConnectionButtonStatus.error) {
           context.read<KrpcConnectionBloc>().add(RPCConnectionRequest());
         }
       },
@@ -266,4 +192,4 @@ class KrpcConnectionButton extends StatelessWidget {
   }
 }
 
-enum ConnectionButtonStatus { notValid, toConnect, connected, error }
+enum ConnectionButtonStatus {notValid, rpcOnly, ready, connecting, connected, error }

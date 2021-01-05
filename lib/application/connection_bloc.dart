@@ -23,6 +23,7 @@ class KrpcConnectionBloc
 
   KrpcConnectionBloc() : super(KrpcDisconnectedState()) {
     _container = ProviderContainer();
+    _parameters = ConnectionParameters();
     _client = _container.read(clientProvider);
   }
 
@@ -30,22 +31,46 @@ class KrpcConnectionBloc
   Stream<KrpcConnectionState> mapEventToState(
     KrpcConnectionEvent event,
   ) async* {
+    print(event.toString());
     if (event is ConnectionParametersEvent) {
       _updateConnectionParameters(event);
+      yield _validityState();
     } else if (event is RPCConnectionRequest) {
       yield KrpcConnectingState();
 
-      if (_parameters.rpcValid) {
-        yield* _tryToConnect();
+      if (_parameters.rpcValid || _parameters.valid) {
+        yield* _tryToConnectRPC();
       } else {
-        yield KrpcDisconnectedState();
+        yield KprcConnectionValidityState(ConnectionValidity.invalid);
       }
     } else if (event is DisconnectKrpcEvent) {
       yield* _tryToDisconnect();
     }
   }
 
-  Stream<KrpcConnectionState> _tryToConnect() async* {
+  void _updateConnectionParameters(ConnectionParametersEvent event) {
+    if (event is IpParameterEvent) {
+      _parameters.ip = event.ip;
+    } else if (event is RpcPortParameterEvent) {
+      _parameters.rpcPort = event.port;
+    } else if (event is StreamPortParameterEvent) {
+      _parameters.streamPort = event.port;
+    } else if (event is ClientNameParameterEvent) {
+      _parameters.clientName = event.string;
+    }
+  }
+
+  KrpcConnectionState _validityState() {
+    if (_parameters.valid) {
+      return KprcConnectionValidityState(ConnectionValidity.valid);
+    } else if (_parameters.rpcValid) {
+      return KprcConnectionValidityState(ConnectionValidity.rpcOnly);
+    } else {
+      return KprcConnectionValidityState(ConnectionValidity.invalid);
+    }
+  }
+
+  Stream<KrpcConnectionState> _tryToConnectRPC() async* {
     try {
       await _client.connectRPC();
       yield KrpcConnectedState();
@@ -65,15 +90,5 @@ class KrpcConnectionBloc
     }
   }
 
-  void _updateConnectionParameters(ConnectionParametersEvent event) {
-    if (event is IpParameterEvent) {
-      _parameters.ip = event.ip;
-    } else if (event is RpcPortParameterEvent) {
-      _parameters.rpcPort = event.port;
-    } else if (event is StreamPortParameterEvent) {
-      _parameters.streamPort = event.port;
-    } else if (event is ClientNameParameterEvent) {
-      _parameters.clientName = event.string;
-    }
-  }
+
 }

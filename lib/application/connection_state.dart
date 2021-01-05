@@ -9,6 +9,15 @@ class KrpcConnectedState extends KrpcConnectionState {}
 
 class KrpcConnectingState extends KrpcConnectionState {}
 
+
+enum ConnectionValidity {valid, rpcOnly, invalid}
+
+class KprcConnectionValidityState extends KrpcConnectionState {
+  final ConnectionValidity validity;
+  KprcConnectionValidityState(this.validity);
+}
+
+
 class KrpcConnectionErrorState extends KrpcConnectionState {
   final String error;
   final String stackTrace;
