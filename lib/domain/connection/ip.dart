@@ -3,6 +3,8 @@ import '../ValueValidated.dart';
 class Ip extends ValueValidated<String> {
   final String _value;
   Ip(this._value) : super(_value, IpValidator(_value));
+
+  Ip.localhost() : this('localhost');
 }
 
 class IpValidator extends Validator<String> {
@@ -21,4 +23,6 @@ class IpValidator extends Validator<String> {
   }
 }
 
-class MalformedIpFailure extends Failure {}
+class MalformedIpFailure extends Failure {
+  String description() => 'Ip is incorrect.';
+}

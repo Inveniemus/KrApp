@@ -48,7 +48,7 @@ abstract class ValueValidated<T> {
 /// by providing the getFailureOrNull method.
 abstract class Validator<T> {
   final T _value;
-  Validator(this._value);
+  const Validator(this._value);
 
   /// Method for validation logic. If it returns null, value is
   /// validated. Otherwise, it shall return a concrete implementation of
@@ -59,6 +59,10 @@ abstract class Validator<T> {
 /// This class represents a failed value of a value validated object (a
 /// [ValueValidated] class). To use it, implement it with a meaningful
 /// class name.
-abstract class Failure {}
+abstract class Failure {
+  String description();
+}
 
-class NoFailure extends Failure {}
+class NoFailure extends Failure {
+  String description() => ""; // Description is only used on failed cases.
+}

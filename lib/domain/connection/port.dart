@@ -1,14 +1,19 @@
 import 'package:kerbal_remote_application/domain/ValueValidated.dart';
 
+final defaultStreamPort = Port('50001');
+
 class Port extends ValueValidated<String> {
   final String _value;
   Port(this._value) : super(_value, PortValidator(_value));
+
+  Port.defaultRpc() : this('50000');
+  Port.defaultStream() : this('50001');
 }
 
 class PortValidator extends Validator<String> {
 
   final String _value;
-  PortValidator(this._value) : super(_value);
+  const PortValidator(this._value) : super(_value);
 
   @override
   Failure getFailureOrNull() {
@@ -22,4 +27,6 @@ class PortValidator extends Validator<String> {
   }
 }
 
-class PortFailure extends Failure {}
+class PortFailure extends Failure {
+  String description() => 'Port number is incorrect.';
+}
