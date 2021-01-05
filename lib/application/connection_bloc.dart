@@ -8,6 +8,9 @@ import 'package:meta/meta.dart';
 
 import '../krpc/client.dart';
 
+import '../domain/connection/ip.dart';
+import '../domain/connection/port.dart';
+
 part 'connection_event.dart';
 
 part 'connection_state.dart';
@@ -28,7 +31,7 @@ class KrpcConnectionBloc
     KrpcConnectionEvent event,
   ) async* {
     if (event is ConnectionParametersEvent) {
-      _parameters = event.parameters;
+      _updateConnectionParameters(event);
     } else if (event is RPCConnectionRequest) {
       yield KrpcConnectingState();
 
@@ -59,6 +62,18 @@ class KrpcConnectionBloc
       yield KrpcConnectionErrorState(e.toString(), s.toString());
     } finally {
       _client = null;
+    }
+  }
+
+  void _updateConnectionParameters(ConnectionParametersEvent event) {
+    if (event is IpParameterEvent) {
+      _parameters.ip = event.ip;
+    } else if (event is RpcPortParameterEvent) {
+      _parameters.rpcPort = event.port;
+    } else if (event is StreamPortParameterEvent) {
+      _parameters.streamPort = event.port;
+    } else if (event is ClientNameParameterEvent) {
+      _parameters.clientName = event.string;
     }
   }
 }

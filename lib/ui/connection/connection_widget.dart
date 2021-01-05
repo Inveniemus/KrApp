@@ -6,6 +6,10 @@ import '../../application/connection_bloc.dart';
 import '../../domain/connection/ip.dart';
 import '../../domain/connection/port.dart';
 
+typedef IpCallback = Function(Ip ip);
+typedef PortCallback = Function(Port port);
+typedef StringCallback = Function(String string);
+
 class ConnectionWidget extends StatefulWidget {
   @override
   _ConnectionWidgetState createState() => _ConnectionWidgetState();
@@ -20,19 +24,21 @@ class _ConnectionWidgetState extends State<ConnectionWidget> {
     _connectionParameters = ConnectionParameters();
   }
 
-  void setNewConnectionParameters(ConnectionParameters newParameters) {
-    _connectionParameters = newParameters;
-  }
+  void setIp(Ip ip) => _connectionParameters.ip = ip;
+  void setRpcPort(Port port) => _connectionParameters.rpcPort = port;
+  void setStreamPort(Port port) => _connectionParameters.streamPort = port;
+  void setClientName(String string) =>
+      _connectionParameters.clientName = string;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       children: [
         Icon(Icons.error),
-        IpInputField('ip address or "localhost"', Ip.localhost()),
-        PortInputField('RPC port', Port.defaultRpc()),
-        PortInputField('Stream port', Port.defaultStream()),
-        TextInputField('Client name', 'Dart-client'),
+        IpInputField('ip address or "localhost"', Ip.localhost(), setIp),
+        PortInputField('RPC port', Port.defaultRpc(), setRpcPort),
+        PortInputField('Stream port', Port.defaultStream(), setStreamPort),
+        TextInputField('Client name', 'Dart-client', setClientName),
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: BlocConsumer<KrpcConnectionBloc, KrpcConnectionState>(
@@ -68,8 +74,9 @@ class _ConnectionWidgetState extends State<ConnectionWidget> {
 class IpInputField extends StatefulWidget {
   final String _label;
   final Ip _initialValue;
+  final IpCallback _ipCallback;
 
-  IpInputField(this._label, this._initialValue);
+  IpInputField(this._label, this._initialValue, this._ipCallback);
 
   @override
   _IpInputFieldState createState() => _IpInputFieldState();
@@ -94,6 +101,7 @@ class _IpInputFieldState extends State<IpInputField> {
   }
 
   void setValidValue(Ip ip) {
+    widget._ipCallback(ip);
     setState(() {
       _value = ip;
       _inputMessage = null;
@@ -125,8 +133,9 @@ class _IpInputFieldState extends State<IpInputField> {
 class PortInputField extends StatefulWidget {
   final String _label;
   final Port _initialValue;
+  final PortCallback _portCallback;
 
-  PortInputField(this._label, this._initialValue);
+  PortInputField(this._label, this._initialValue, this._portCallback);
 
   @override
   _PortInputFieldState createState() => _PortInputFieldState();
@@ -151,6 +160,7 @@ class _PortInputFieldState extends State<PortInputField> {
   }
 
   void setValidValue(Port port) {
+    widget._portCallback(port);
     setState(() {
       _value = port;
       _inputMessage = null;
@@ -182,8 +192,9 @@ class _PortInputFieldState extends State<PortInputField> {
 class TextInputField extends StatelessWidget {
   final String _label;
   final String _initialValue;
+  final StringCallback _stringCallback;
 
-  TextInputField(this._label, this._initialValue);
+  TextInputField(this._label, this._initialValue, this._stringCallback);
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +202,7 @@ class TextInputField extends StatelessWidget {
       padding: const EdgeInsets.all(8.0),
       child: TextField(
         decoration: getInputDecoration(_label, _initialValue),
-        onChanged: (String value) {},
+        onChanged: (String value) => _stringCallback(value),
       ),
     );
   }
@@ -213,11 +224,11 @@ InputDecoration getInputDecoration(String label, [String hint, String helper]) {
 /// connected, it turns green with the message "connected".
 class KrpcConnectionButton extends StatelessWidget {
   final ConnectionButtonStatus _status;
-  final Map<String, dynamic> _connectionData;
+
   String _text;
   Color _color;
 
-  KrpcConnectionButton(this._status, [this._connectionData]) {
+  KrpcConnectionButton(this._status) {
     switch (_status) {
       case ConnectionButtonStatus.notValid:
         _text = "Entries not valid";
@@ -248,10 +259,7 @@ class KrpcConnectionButton extends StatelessWidget {
         if (_status == ConnectionButtonStatus.connected) {
           context.read<KrpcConnectionBloc>().add(DisconnectKrpcEvent());
         } else if (_status == ConnectionButtonStatus.toConnect) {
-          context.read<KrpcConnectionBloc>().add(RPCConnectionRequest(
-              _connectionData['ip'],
-              _connectionData['rpcPort'],
-              _connectionData['clientName']));
+          context.read<KrpcConnectionBloc>().add(RPCConnectionRequest());
         }
       },
     );
