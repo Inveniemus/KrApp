@@ -31,7 +31,6 @@ class KrpcConnectionBloc
   Stream<KrpcConnectionState> mapEventToState(
     KrpcConnectionEvent event,
   ) async* {
-    print(event.toString());
     if (event is ConnectionParametersEvent) {
       _updateConnectionParameters(event);
       yield _validityState();

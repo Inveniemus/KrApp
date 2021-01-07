@@ -5,9 +5,6 @@ import '../../application/connection_bloc.dart';
 import '../../domain/connection/ip.dart';
 import '../../domain/connection/port.dart';
 
-typedef IpCallback = Function(Ip ip);
-typedef PortCallback = Function(Port port);
-
 class ConnectionWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -70,16 +67,17 @@ class InputField<T> extends StatefulWidget {
 class _InputFieldState<T> extends State<InputField> {
   String _inputMessage;
 
-  void _processStringValue(String value) {
-    if (T is Ip) {
+  void _processStringValue(String value, BuildContext context) {
+    if (T == Ip) {
       final ip = Ip(value);
       if (ip.isValid || value == '') {
         context.read<KrpcConnectionBloc>().add(IpParameterEvent(ip));
         _rebuildInputMessage(null);
       } else {
+        print(ip.failure.description());
         _rebuildInputMessage(ip.failure.description());
       }
-    } else if (T is Port) {
+    } else if (T == Port) {
       final port = Port(value);
       if (port.isValid || value == '') {
         if (widget._label == 'RPC port') {
@@ -93,7 +91,7 @@ class _InputFieldState<T> extends State<InputField> {
       } else {
         _rebuildInputMessage(port.failure.description());
       }
-    } else if (T is String) {
+    } else if (T == String) {
       context.read<KrpcConnectionBloc>().add(ClientNameParameterEvent(value));
     }
   }
@@ -113,17 +111,16 @@ class _InputFieldState<T> extends State<InputField> {
       child: TextField(
         decoration: getInputDecoration(widget._label, _inputMessage),
         onChanged: (String value) {
-          _processStringValue(value);
+          _processStringValue(value, context);
         },
       ),
     );
   }
 }
 
-InputDecoration getInputDecoration(String label, [String hint, String helper]) {
+InputDecoration getInputDecoration(String label, String helper) {
   return InputDecoration(
     labelText: label,
-    hintText: hint,
     helperText: helper,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
   );
