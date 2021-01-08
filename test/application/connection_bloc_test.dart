@@ -22,11 +22,11 @@ class ConnectionValidityMatcher extends CustomMatcher {
 
 void main() {
   KrpcClientMock krpcClientMock;
-  ProviderContainer container;
+  ProviderContainer testingClientContainer;
 
   setUp(() {
     krpcClientMock = KrpcClientMock();
-    container = ProviderContainer(
+    testingClientContainer = ProviderContainer(
       overrides: [
         clientProvider.overrideWithProvider(Provider((ref) => krpcClientMock)),
       ],
@@ -58,7 +58,12 @@ void main() {
   blocTest(
       'Should call for client connection when Connection parameters are rpcOnly'
       'valid and a connection request event is received',
-    build: () => KrpcConnectionBloc(),
+    build: () {
+        when(krpcClientMock.connectRPC()).thenReturn(null);
+        final bloc = KrpcConnectionBloc();
+        bloc.setTestingContainer(testingClientContainer);
+        return bloc;
+    },
     act: (bloc) {
       bloc.add(IpParameterEvent(Ip('localhost')));
       bloc.add(RpcPortParameterEvent(Port('1000')));
@@ -70,5 +75,28 @@ void main() {
       isA<KrpcConnectingState>(),
       isA<KrpcConnectedState>(),
     ]
+  );
+
+  blocTest(
+      'Should emit KrpcConnectionErrorState when the client throws a'
+      'KrpcConnectionError exception.',
+      build: () {
+        when(krpcClientMock.connectRPC())
+            .thenThrow(KrpcConnectionError('error'));
+        final bloc = KrpcConnectionBloc();
+        bloc.setTestingContainer(testingClientContainer);
+        return bloc;
+      },
+      act: (bloc) {
+        bloc.add(IpParameterEvent(Ip('localhost')));
+        bloc.add(RpcPortParameterEvent(Port('1000')));
+        bloc.add(RPCConnectionRequest());
+      },
+      expect: [
+        ConnectionValidityMatcher(ConnectionValidity.invalid),
+        ConnectionValidityMatcher(ConnectionValidity.rpcOnly),
+        isA<KrpcConnectingState>(),
+        isA<KrpcConnectionErrorState>(),
+      ]
   );
 }

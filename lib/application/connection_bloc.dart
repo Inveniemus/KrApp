@@ -23,14 +23,15 @@ class KrpcConnectionBloc
 
   KrpcConnectionBloc() : super(KrpcDisconnectedState()) {
     _container = ProviderContainer();
-    _parameters = ConnectionParameters();
     _client = _container.read(clientProvider);
+    _parameters = ConnectionParameters();
   }
 
   @override
   Stream<KrpcConnectionState> mapEventToState(
     KrpcConnectionEvent event,
   ) async* {
+    print(event.toString());
     if (event is ConnectionParametersEvent) {
       _updateConnectionParameters(event);
       yield _validityState();
@@ -71,6 +72,9 @@ class KrpcConnectionBloc
 
   Stream<KrpcConnectionState> _tryToConnectRPC() async* {
     try {
+      _client.ip = _parameters.ip.value;
+      _client.rpcPort = int.parse(_parameters.rpcPort.value);
+      _client.clientName = _parameters.clientName ?? 'KrApp';
       await _client.connectRPC();
       yield KrpcConnectedState();
     } on Exception catch (e, s) {
@@ -89,5 +93,9 @@ class KrpcConnectionBloc
     }
   }
 
-
+  // Testing stuff
+  void setTestingContainer(ProviderContainer testingContainer) {
+    _container = testingContainer;
+    _client = _container.read(clientProvider);
+  }
 }
