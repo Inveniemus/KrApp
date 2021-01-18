@@ -1,12 +1,12 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_riverpod/all.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kerbal_remote_application/application/connection/connection_bloc.dart';
 import 'package:kerbal_remote_application/domain/connection/ip.dart';
 import 'package:kerbal_remote_application/domain/connection/port.dart';
 import 'package:kerbal_remote_application/krpc/client.dart';
 import 'package:krpc_dart/krpc_dart.dart';
 import 'package:mockito/mockito.dart';
-import 'package:kerbal_remote_application/application/connection_bloc.dart';
 
 // Mocks
 class KrpcClientMock extends Mock implements KrpcClient {}

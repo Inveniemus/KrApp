@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../application/connection_bloc.dart';
+import '../../application/connection/connection_bloc.dart';
 import '../../domain/connection/ip.dart';
 import '../../domain/connection/port.dart';
 
@@ -19,7 +19,6 @@ class ConnectionWidget extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           child: BlocConsumer<KrpcConnectionBloc, KrpcConnectionState>(
             listener: (context, state) {
-              print(state);
               if (state is KrpcConnectionErrorState) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text("ERROR! Couldn't connect"),
@@ -74,7 +73,6 @@ class _InputFieldState<T> extends State<InputField> {
         context.read<KrpcConnectionBloc>().add(IpParameterEvent(ip));
         _rebuildInputMessage(null);
       } else {
-        print(ip.failure.description());
         _rebuildInputMessage(ip.failure.description());
       }
     } else if (T == Port) {

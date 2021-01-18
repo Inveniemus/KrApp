@@ -13,7 +13,7 @@ dependencies:
     sdk: flutter
   krpc_dart:
     path: ../krpc-dart/
-  flutter_riverpod: ^0.12.1
+  flutter_riverpod: ^0.12.2
   flutter_bloc: ^6.1.1
 
 dev_dependencies:

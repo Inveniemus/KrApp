@@ -2,28 +2,25 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter_riverpod/all.dart';
-import 'package:kerbal_remote_application/domain/connection/connection_parameters.dart';
 import 'package:krpc_dart/krpc_dart.dart';
 import 'package:meta/meta.dart';
 
-import '../krpc/client.dart';
+import '../../krpc/client.dart';
 
-import '../domain/connection/ip.dart';
-import '../domain/connection/port.dart';
+import '../../domain/connection/ip.dart';
+import '../../domain/connection/port.dart';
+import '../../domain/connection/connection_parameters.dart';
 
 part 'connection_event.dart';
-
 part 'connection_state.dart';
 
 class KrpcConnectionBloc
     extends Bloc<KrpcConnectionEvent, KrpcConnectionState> {
-  ProviderContainer _container;
   ConnectionParameters _parameters;
   KrpcClient _client;
 
   KrpcConnectionBloc() : super(KrpcDisconnectedState()) {
-    _container = ProviderContainer();
-    _client = _container.read(clientProvider);
+    _client = ProviderContainer().read(clientProvider);
     _parameters = ConnectionParameters();
   }
 
@@ -31,7 +28,6 @@ class KrpcConnectionBloc
   Stream<KrpcConnectionState> mapEventToState(
     KrpcConnectionEvent event,
   ) async* {
-    print(event.toString());
     if (event is ConnectionParametersEvent) {
       _updateConnectionParameters(event);
       yield _validityState();
@@ -95,7 +91,6 @@ class KrpcConnectionBloc
 
   // Testing stuff
   void setTestingContainer(ProviderContainer testingContainer) {
-    _container = testingContainer;
-    _client = _container.read(clientProvider);
+    _client = testingContainer.read(clientProvider);
   }
 }
